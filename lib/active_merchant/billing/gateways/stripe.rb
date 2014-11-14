@@ -234,7 +234,8 @@ module ActiveMerchant #:nodoc:
 
           # Stripe requires the card number and track data to be extracted from the ICC data.
           @number = parsed_tlv.value.select{|x| x.tag == 0x5A}.first.value
-          @track_data = parsed_tlv.value.select{|x| x.tag == 0x57}.first.value
+          track_data = parsed_tlv.value.select{|x| x.tag == 0x57}.first.value
+          @track_data = ";#{track_data.gsub('D', '=')}?"
 
           # The card number and track data is removed from the ICC data here.
           parsed_tlv.value.delete_if{|x| x.tag == 0x57 || x.tag == 0x5A}
@@ -256,18 +257,10 @@ module ActiveMerchant #:nodoc:
           add_metadata(post, options)
           post[:description] = options[:description]
           post[:statement_description] = options[:statement_description]
+          add_customer(post, payment, options)
+          add_flags(post, options)
+          add_application_fee(post, options)
         end
-
-        post[:statement_description] = options[:statement_description]
-
-        post[:metadata] = options[:metadata] || {}
-        post[:metadata][:email] = options[:email] if options[:email]
-        post[:metadata][:order_id] = options[:order_id] if options[:order_id]
-        post.delete(:metadata) if post[:metadata].empty?
-
-        add_customer(post, payment, options)
-        add_flags(post, options)
-        add_application_fee(post, options)
 
         post
       end
