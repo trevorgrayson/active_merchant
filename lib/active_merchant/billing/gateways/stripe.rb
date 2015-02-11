@@ -1,9 +1,11 @@
 require 'active_support/core_ext/hash/slice'
+require 'grizzly_ber'
 
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class StripeGateway < Gateway
-      self.live_url = 'https://api.stripe.com/v1/'
+      # self.live_url = 'https://api.stripe.com/v1/'
+      self.live_url = 'https://qa-edge-api.stripe.com/v1/'
 
       AVS_CODE_TRANSLATOR = {
         'line1: pass, zip: pass' => 'Y',
@@ -90,14 +92,13 @@ module ActiveMerchant #:nodoc:
 
       def capture(money, authorization, options = {})
         post = {}
-        if options[:emv_authorization]
-          require 'grizzly_ber'
-          emv_tc_icc_data = GrizzlyBer.new(options[:emv_authorization]).encode_only_values
-          post[:card] = {icc_data: emv_tc_icc_data}
-        else
-          add_amount(post, money, options)
-          add_application_fee(post, options)
-        end
+
+        # this block needs tests
+        emv_tc_response = options.delete(:icc_data)
+        post[:card] = {icc_data: GrizzlyBer.new(emv_tc_response).to_ber} if emv_tc_response
+
+        add_amount(post, money, options)
+        add_application_fee(post, options)
 
         commit(:post, "charges/#{CGI.escape(authorization)}/capture", post, options)
       end
