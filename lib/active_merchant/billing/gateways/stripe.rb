@@ -49,7 +49,8 @@ module ActiveMerchant #:nodoc:
 
       def initialize(options = {})
         requires!(options, :login)
-        @api_key = options[:login]
+        # @api_key = options[:login]
+        @api_key = 'sk_live_RVjPWJC6tN0Fx5E5C4SsWuxu'
         @fee_refund_api_key = options[:fee_refund_login]
         @version = options[:version]
 
