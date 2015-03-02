@@ -16,6 +16,7 @@ class StripeTest < Test::Unit::TestCase
     }
 
     @apple_pay_payment_token = apple_pay_payment_token
+    @emv_credit_card = credit_card_with_icc_data
   end
 
   def test_successful_new_customer_with_card
@@ -42,6 +43,18 @@ class StripeTest < Test::Unit::TestCase
     assert response.test?
   end
 
+  def test_successful_new_customer_with_emv_credit_card
+    @gateway.expects(:ssl_request).returns(successful_new_customer_response)
+
+    assert response = @gateway.store(@emv_credit_card, @options)
+    assert_instance_of Response, response
+    assert_success response
+
+    assert_equal 'cus_3sgheFxeBgTQ3M', response.authorization
+    assert response.test?
+  end
+
+
   def test_successful_new_card
     @gateway.expects(:ssl_request).returns(successful_new_card_response)
     @gateway.expects(:add_creditcard)
@@ -59,6 +72,18 @@ class StripeTest < Test::Unit::TestCase
     @gateway.expects(:tokenize_apple_pay_token).returns(Response.new(true, nil, token: successful_apple_pay_token_exchange))
 
     assert response = @gateway.store(@apple_pay_payment_token, :customer => 'cus_3sgheFxeBgTQ3M')
+    assert_instance_of MultiResponse, response
+    assert_success response
+
+    assert_equal 'card_483etw4er9fg4vF3sQdrt3FG', response.authorization
+    assert response.test?
+  end
+
+  def test_successful_new_card_with_emv_credit_card
+    @gateway.expects(:ssl_request).returns(successful_new_card_response)
+    @gateway.expects(:add_creditcard)
+
+    assert response = @gateway.store(@emv_credit_card, :customer => 'cus_3sgheFxeBgTQ3M')
     assert_instance_of MultiResponse, response
     assert_success response
 
@@ -86,6 +111,20 @@ class StripeTest < Test::Unit::TestCase
     @gateway.expects(:tokenize_apple_pay_token).returns(Response.new(true, nil, token: successful_apple_pay_token_exchange))
 
     assert response = @gateway.store(@apple_pay_payment_token, :customer => 'cus_3sgheFxeBgTQ3M', :email => 'test@test.com')
+    assert_instance_of MultiResponse, response
+    assert_success response
+
+    assert_equal 'card_483etw4er9fg4vF3sQdrt3FG', response.authorization
+    assert_equal 2, response.responses.size
+    assert_equal 'card_483etw4er9fg4vF3sQdrt3FG', response.responses[0].authorization
+    assert_equal 'cus_3sgheFxeBgTQ3M', response.responses[1].authorization
+    assert response.test?
+  end
+
+  def test_successful_new_card_and_customer_update_with_emv_credit_card
+    @gateway.expects(:ssl_request).twice.returns(successful_new_card_response, successful_new_customer_response)
+
+    assert response = @gateway.store(@emv_credit_card, :customer => 'cus_3sgheFxeBgTQ3M', :email => 'test@test.com')
     assert_instance_of MultiResponse, response
     assert_success response
 
@@ -126,6 +165,20 @@ class StripeTest < Test::Unit::TestCase
     assert response.test?
   end
 
+  def test_successful_new_default_card_with_emv_credit_card
+    @gateway.expects(:ssl_request).twice.returns(successful_new_card_response, successful_new_customer_response)
+
+    assert response = @gateway.store(@emv_credit_card, @options.merge(:customer => 'cus_3sgheFxeBgTQ3M', :set_default => true))
+    assert_instance_of MultiResponse, response
+    assert_success response
+
+    assert_equal 'card_483etw4er9fg4vF3sQdrt3FG', response.authorization
+    assert_equal 2, response.responses.size
+    assert_equal 'card_483etw4er9fg4vF3sQdrt3FG', response.responses[0].authorization
+    assert_equal 'cus_3sgheFxeBgTQ3M', response.responses[1].authorization
+    assert response.test?
+  end
+
   def test_successful_authorization
     @gateway.expects(:add_creditcard)
     @gateway.expects(:ssl_request).returns(successful_authorization_response)
@@ -150,8 +203,27 @@ class StripeTest < Test::Unit::TestCase
     assert response.test?
   end
 
+  def test_successful_authorization_with_emv_credit_card
+    @gateway.expects(:ssl_request).returns(successful_authorization_response_with_icc_data)
+
+    assert response = @gateway.authorize(@amount, @emv_credit_card, @options)
+    assert_instance_of Response, response
+    assert_success response
+
+    assert_equal 'ch_test_charge', response.authorization
+    assert response.test?
+  end
+
   def test_successful_capture
     @gateway.expects(:ssl_request).returns(successful_capture_response)
+
+    assert response = @gateway.capture(@amount, "ch_test_charge")
+    assert_success response
+    assert response.test?
+  end
+
+  def test_successful_capture_with_emv_credit_card_tc
+    @gateway.expects(:ssl_request).returns(successful_capture_response_with_icc_data)
 
     assert response = @gateway.capture(@amount, "ch_test_charge")
     assert_success response
@@ -385,6 +457,12 @@ class StripeTest < Test::Unit::TestCase
     credit_card_token = "card_2iD4AezYnNNzkW"
     @gateway.send(:add_creditcard, post, credit_card_token, :track_data => "Tracking data")
     assert_equal "Tracking data", post[:card][:swipe_data]
+  end
+
+  def test_add_creditcard_with_emv_credit_card
+    post = {}
+    @gateway.send(:add_creditcard, post, @emv_credit_card)
+    assert_equal @emv_credit_card.icc_data, post[:card][:icc_data]
   end
 
   def test_add_customer
@@ -827,7 +905,67 @@ class StripeTest < Test::Unit::TestCase
     RESPONSE
   end
 
+  def successful_authorization_response_with_icc_data
+    <<-RESPONSE
+    {
+      "id": "ch_test_charge",
+      "object": "charge",
+      "created": 1309131571,
+      "livemode": false,
+      "paid": true,
+      "amount": 400,
+      "currency": "usd",
+      "refunded": false,
+      "fee": 0,
+      "fee_details": [],
+      "card": {
+        "country": "US",
+        "exp_month": 9,
+        "exp_year": #{Time.now.year + 1},
+        "last4": "4242",
+        "object": "card",
+        "type": "Visa"
+      },
+      "captured": false,
+      "description": "ActiveMerchant Test Purchase",
+      "dispute": null,
+      "uncaptured": true,
+      "disputed": false
+    }
+    RESPONSE
+  end
+
   def successful_capture_response
+    <<-RESPONSE
+    {
+      "id": "ch_test_charge",
+      "object": "charge",
+      "created": 1309131571,
+      "livemode": false,
+      "paid": true,
+      "amount": 400,
+      "currency": "usd",
+      "refunded": false,
+      "fee": 0,
+      "fee_details": [],
+      "card": {
+        "country": "US",
+        "exp_month": 9,
+        "exp_year": #{Time.now.year + 1},
+        "last4": "4242",
+        "object": "card",
+        "type": "Visa"
+      },
+      "captured": true,
+      "description": "ActiveMerchant Test Purchase",
+      "dispute": null,
+      "uncaptured": false,
+      "disputed": false
+    }
+    RESPONSE
+  end
+
+  def successful_capture_response_with_icc_data
     <<-RESPONSE
     {
       "id": "ch_test_charge",
