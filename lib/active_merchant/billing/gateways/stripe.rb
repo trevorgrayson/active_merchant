@@ -4,8 +4,7 @@ require 'grizzly_ber'
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class StripeGateway < Gateway
-      # self.live_url = 'https://api.stripe.com/v1/'
-      self.live_url = 'https://qa-edge-api.stripe.com/v1/'
+      self.live_url = 'https://api.stripe.com/v1/'
 
       AVS_CODE_TRANSLATOR = {
         'line1: pass, zip: pass' => 'Y',
@@ -484,7 +483,7 @@ module ActiveMerchant #:nodoc:
           :authorization => success ? response["id"] : response["error"]["charge"],
           :avs_result => { :code => avs_code },
           :cvv_result => cvc_code,
-          :emv_authorization => card["icc_data"],
+          :emv_authorization => response["icc_data"],
           :error_code => success ? nil : STANDARD_ERROR_CODE_MAPPING[response["error"]["code"]]
         )
       end
