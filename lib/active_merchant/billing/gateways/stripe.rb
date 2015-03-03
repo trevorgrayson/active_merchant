@@ -241,8 +241,9 @@ module ActiveMerchant #:nodoc:
 
           # Stripe requires the card number and track data to be extracted and removed from the ICC data.
           @number = parsed_tlv.hex_value_of_first_element_with_tag("5A")
+
           track_data = parsed_tlv.hex_value_of_first_element_with_tag("57")
-          @track_data = ";#{track_data.gsub('D', '=')}?"
+          @track_data = ";#{track_data.gsub('D', '=')}?" if track_data
 
           # The card number and track data is removed from the ICC data here.
           parsed_tlv.remove!("57")

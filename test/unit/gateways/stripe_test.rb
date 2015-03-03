@@ -210,8 +210,8 @@ class StripeTest < Test::Unit::TestCase
     assert_instance_of Response, response
     assert_success response
 
-    assert_equal 'ch_test_charge', response.authorization
-    assert response.test?
+    assert_equal 'ch_test_emv_charge', response.authorization
+    assert response.emv_authorization, "Response should include emv_authorization containing the EMV ARQC"
   end
 
   def test_successful_capture
@@ -225,9 +225,9 @@ class StripeTest < Test::Unit::TestCase
   def test_successful_capture_with_emv_credit_card_tc
     @gateway.expects(:ssl_request).returns(successful_capture_response_with_icc_data)
 
-    assert response = @gateway.capture(@amount, "ch_test_charge")
+    assert response = @gateway.capture(@amount, "ch_test_emv_charge")
     assert_success response
-    assert response.test?
+    assert response.emv_authorization, "Response should include emv_authorization containing the EMV TC"
   end
 
   def test_successful_purchase
@@ -461,7 +461,7 @@ class StripeTest < Test::Unit::TestCase
 
   def test_add_creditcard_with_emv_credit_card
     post = {}
-    @gateway.send(:add_creditcard, post, @emv_credit_card)
+    @gateway.send(:add_creditcard, post, @emv_credit_card, {})
     assert_equal @emv_credit_card.icc_data, post[:card][:icc_data]
   end
 
@@ -908,29 +908,88 @@ class StripeTest < Test::Unit::TestCase
   def successful_authorization_response_with_icc_data
     <<-RESPONSE
     {
-      "id": "ch_test_charge",
+      "id": "ch_test_emv_charge",
       "object": "charge",
-      "created": 1309131571,
-      "livemode": false,
+      "created": 1425395589,
+      "livemode": true,
       "paid": true,
-      "amount": 400,
-      "currency": "usd",
+      "status": "paid",
+      "amount": 73449,
+      "currency": "gbp",
       "refunded": false,
-      "fee": 0,
-      "fee_details": [],
-      "card": {
-        "country": "US",
-        "exp_month": 9,
-        "exp_year": #{Time.now.year + 1},
-        "last4": "4242",
+      "source": {
+        "id": "card_15cHhpCCNNK3soAoeak5ILoc",
         "object": "card",
-        "type": "Visa"
+        "last4": "0119",
+        "brand": "Visa",
+        "funding": "unknown",
+        "exp_month": 12,
+        "exp_year": 2015,
+        "fingerprint": "cZYHlSrkoC1WGGK2",
+        "country": "VN",
+        "name": null,
+        "address_line1": null,
+        "address_line2": null,
+        "address_city": null,
+        "address_state": null,
+        "address_zip": null,
+        "address_country": null,
+        "cvc_check": null,
+        "address_line1_check": null,
+        "address_zip_check": null,
+        "dynamic_last4": null,
+        "metadata": {},
+        "customer": null
       },
       "captured": false,
-      "description": "ActiveMerchant Test Purchase",
+      "card": {
+        "id": "card_15cHhpCCNNK3soAoeak5ILoc",
+        "object": "card",
+        "last4": "0119",
+        "brand": "Visa",
+        "funding": "unknown",
+        "exp_month": 12,
+        "exp_year": 2015,
+        "fingerprint": "cZYHlSrkoC1WGGK2",
+        "country": "VN",
+        "name": null,
+        "address_line1": null,
+        "address_line2": null,
+        "address_city": null,
+        "address_state": null,
+        "address_zip": null,
+        "address_country": null,
+        "cvc_check": null,
+        "address_line1_check": null,
+        "address_zip_check": null,
+        "dynamic_last4": null,
+        "metadata": {},
+        "customer": null
+      },
+      "balance_transaction": null,
+      "failure_message": null,
+      "failure_code": null,
+      "amount_refunded": 0,
+      "customer": null,
+      "invoice": null,
+      "description": null,
       "dispute": null,
-      "uncaptured": true,
-      "disputed": false
+      "metadata": {},
+      "statement_descriptor": null,
+      "fraud_details": {},
+      "receipt_email": null,
+      "receipt_number": null,
+      "authorization_code": "224811",
+      "icc_data": "9F360200C3910A83C2E7A3A976F4DE30308A023030",
+      "shipping": null,
+      "refunds": {
+        "object": "list",
+        "total_count": 0,
+        "has_more": false,
+        "url": "/v1/charges/ch_15cHhpCCNNK3soAocT7wpfcN/refunds",
+        "data": []
+      },
+      "statement_description": null
     }
     RESPONSE
   end
@@ -968,29 +1027,88 @@ class StripeTest < Test::Unit::TestCase
   def successful_capture_response_with_icc_data
     <<-RESPONSE
     {
-      "id": "ch_test_charge",
+      "id": "ch_test_emv_charge",
       "object": "charge",
-      "created": 1309131571,
-      "livemode": false,
+      "created": 1425395589,
+      "livemode": true,
       "paid": true,
-      "amount": 400,
-      "currency": "usd",
+      "status": "paid",
+      "amount": 73449,
+      "currency": "gbp",
       "refunded": false,
-      "fee": 0,
-      "fee_details": [],
-      "card": {
-        "country": "US",
-        "exp_month": 9,
-        "exp_year": #{Time.now.year + 1},
-        "last4": "4242",
+      "source": {
+        "id": "card_15cHhpCCNNK3soAoeak5ILoc",
         "object": "card",
-        "type": "Visa"
+        "last4": "0119",
+        "brand": "Visa",
+        "funding": "unknown",
+        "exp_month": 12,
+        "exp_year": 2015,
+        "fingerprint": "cZYHlSrkoC1WGGK2",
+        "country": "VN",
+        "name": null,
+        "address_line1": null,
+        "address_line2": null,
+        "address_city": null,
+        "address_state": null,
+        "address_zip": null,
+        "address_country": null,
+        "cvc_check": null,
+        "address_line1_check": null,
+        "address_zip_check": null,
+        "dynamic_last4": null,
+        "metadata": {},
+        "customer": null
       },
       "captured": true,
-      "description": "ActiveMerchant Test Purchase",
+      "card": {
+        "id": "card_15cHhpCCNNK3soAoeak5ILoc",
+        "object": "card",
+        "last4": "0119",
+        "brand": "Visa",
+        "funding": "unknown",
+        "exp_month": 12,
+        "exp_year": 2015,
+        "fingerprint": "cZYHlSrkoC1WGGK2",
+        "country": "VN",
+        "name": null,
+        "address_line1": null,
+        "address_line2": null,
+        "address_city": null,
+        "address_state": null,
+        "address_zip": null,
+        "address_country": null,
+        "cvc_check": null,
+        "address_line1_check": null,
+        "address_zip_check": null,
+        "dynamic_last4": null,
+        "metadata": {},
+        "customer": null
+      },
+      "balance_transaction": "txn_15cHsFCCNNK3soAoJEev76ox",
+      "failure_message": null,
+      "failure_code": null,
+      "amount_refunded": 0,
+      "customer": null,
+      "invoice": null,
+      "description": null,
       "dispute": null,
-      "uncaptured": false,
-      "disputed": false
+      "metadata": {},
+      "statement_descriptor": null,
+      "fraud_details": {},
+      "receipt_email": null,
+      "receipt_number": null,
+      "authorization_code": "224811",
+      "icc_data": "9F360200C3910A83C2E7A3A976F4DE30308A023030",
+      "shipping": null,
+      "refunds": {
+        "object": "list",
+        "total_count": 0,
+        "has_more": false,
+        "url": "/v1/charges/ch_15cHhpCCNNK3soAocT7wpfcN/refunds",
+        "data": []
+      },
+      "statement_description": null
     }
     RESPONSE
   end
