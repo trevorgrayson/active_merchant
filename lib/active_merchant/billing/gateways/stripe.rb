@@ -94,7 +94,7 @@ module ActiveMerchant #:nodoc:
 
         # this block needs tests
         emv_tc_response = options.delete(:icc_data)
-        post[:card] = {icc_data: GrizzlyBer.new(emv_tc_response).to_ber} if emv_tc_response
+        add_emv_creditcard(post, emv_tc_response) if emv_tc_response
 
         add_amount(post, money, options)
         add_application_fee(post, options)
@@ -232,7 +232,7 @@ module ActiveMerchant #:nodoc:
 
       class StripeICCData
         # Handles Stripe-specific parsing of a raw BER-TLV string.
-        attr_reader :number, :track_data, :icc_data, :emv_application_id, :emv_application_label, :emv_verification_method
+        attr_reader :number, :track_data, :icc_data, :emv_application_id, :emv_application_label, :emv_verification_method, :emv_terminal_id
 
         def initialize(raw_tlv_string)
           require 'grizzly_ber'
@@ -252,6 +252,8 @@ module ActiveMerchant #:nodoc:
           @emv_application_id =   parsed_tlv.hex_value_of_first_element_with_tag("4F")
           @emv_application_id ||= parsed_tlv.hex_value_of_first_element_with_tag("9F06")
           @emv_application_id ||= parsed_tlv.hex_value_of_first_element_with_tag("84")
+          @emv_terminal_id =   parsed_tlv["9F1C"] || parsed_tlv["9F1E"]
+          @emv_terminal_id &&= @emv_terminal_id.pack("C*")
           @emv_application_label = parsed_tlv["9F12"] || parsed_tlv["50"]
           @emv_application_label &&= @emv_application_label.pack("C*")
           @emv_verification_method = parsed_tlv["9F34"].first & 0x3F unless parsed_tlv["9F34"].nil? || parsed_tlv["9F34"].length < 1
@@ -348,16 +350,9 @@ module ActiveMerchant #:nodoc:
       def add_creditcard(post, creditcard, options)
         card = {}
         if creditcard.respond_to?(:icc_data) && creditcard.icc_data.present?
-          emv_credit_card = StripeICCData.new(creditcard.icc_data)
-          @emv_receipt = {
-            :emv_application_id => emv_credit_card.emv_application_id,
-            :emv_application_label => emv_credit_card.emv_application_label,
-            :emv_verification_method => emv_credit_card.emv_verification_method
-          }
-          card[:number] = emv_credit_card.number
-          card[:swipe_data] = emv_credit_card.track_data
-          card[:icc_data] = emv_credit_card.icc_data
-          post[:card] = card
+          emv_credit_card = add_emv_creditcard(post, creditcard.icc_data)
+          post[:card][:number] = emv_credit_card.number
+          post[:card][:swipe_data] = emv_credit_card.track_data
         elsif creditcard.respond_to?(:number)
           if creditcard.respond_to?(:track_data) && creditcard.track_data.present?
             card[:swipe_data] = creditcard.track_data
@@ -386,6 +381,20 @@ module ActiveMerchant #:nodoc:
           end
           post[:card] = card
         end
+      end
+
+      def add_emv_creditcard(post, icc_data, options = {})
+        card = {}
+        emv_credit_card = StripeICCData.new(icc_data)
+        @emv_receipt = {
+          :emv_application_id => emv_credit_card.emv_application_id,
+          :emv_application_label => emv_credit_card.emv_application_label,
+          :emv_verification_method => emv_credit_card.emv_verification_method,
+          :emv_terminal_id => emv_credit_card.emv_terminal_id
+        }
+        card[:icc_data] = emv_credit_card.icc_data
+        post[:card] = card
+        emv_credit_card
       end
 
       def add_payment_token(post, token, options = {})
