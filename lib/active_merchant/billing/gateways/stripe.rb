@@ -1,5 +1,4 @@
 require 'active_support/core_ext/hash/slice'
-require 'grizzly_ber'
 
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:

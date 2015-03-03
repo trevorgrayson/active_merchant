@@ -211,7 +211,7 @@ class StripeTest < Test::Unit::TestCase
     assert_success response
 
     assert_equal 'ch_test_emv_charge', response.authorization
-    assert response.emv_authorization, "Response should include emv_authorization containing the EMV ARQC"
+    assert response.emv_authorization, "Response should include emv_authorization containing the EMV ARPC"
   end
 
   def test_successful_capture
@@ -462,7 +462,8 @@ class StripeTest < Test::Unit::TestCase
   def test_add_creditcard_with_emv_credit_card
     post = {}
     @gateway.send(:add_creditcard, post, @emv_credit_card, {})
-    assert_equal @emv_credit_card.icc_data, post[:card][:icc_data]
+
+    assert_equal GrizzlyBer.new(@emv_credit_card.icc_data).remove!("57").remove!("5A").to_ber, post[:card][:icc_data]
   end
 
   def test_add_customer
