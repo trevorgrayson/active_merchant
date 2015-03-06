@@ -340,6 +340,7 @@ module ActiveMerchant #:nodoc:
         elsif creditcard.respond_to?(:number)
           if creditcard.respond_to?(:track_data) && creditcard.track_data.present?
             card[:swipe_data] = creditcard.track_data
+            card[:fallback_reason] = creditcard.fallback_reason if creditcard.fallback_reason
           else
             card[:number] = creditcard.number
             card[:exp_month] = creditcard.month
@@ -456,10 +457,13 @@ module ActiveMerchant #:nodoc:
 
       def commit(method, url, parameters = nil, options = {})
         add_expand_parameters(parameters, options) if parameters
+        response = api_request(method, url, parameters, options)
         emv_receipt = StripeICCData.new(parameters[:card][:icc_data]).receipt_tlv_string if parameters[:card] && parameters[:card][:icc_data]
 
-        response = api_request(method, url, parameters, options)
-        response.merge!({:emv_receipt => emv_receipt}) if emv_receipt
+        if emv_receipt
+          response.merge!({:emv_receipt => emv_receipt})
+          response[:emv_receipt] += response['authorization_code'] if response.has_key?('authorization_code')
+        end
 
         success = !response.key?("error")
 
