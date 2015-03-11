@@ -94,8 +94,9 @@ module ActiveMerchant #:nodoc:
         post = {}
 
         # this block needs tests
-        emv_tc_response = options.delete(:icc_data)
-        add_emv_creditcard(post, emv_tc_response) if emv_tc_response
+        if emv_tc_response = options.delete(:icc_data)
+          post[:card] = {icc_data: StripeICCData.new(emv_tc_response).icc_data}
+        end
 
         add_amount(post, money, options)
         add_application_fee(post, options)
