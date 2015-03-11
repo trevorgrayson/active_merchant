@@ -255,7 +255,8 @@ module ActiveMerchant #:nodoc:
             "82",               # Application Interchange Profile
             "9F08",             # Application Version Number (Card)
             "9F09",             # Application Version Number (Terminal)
-            "9F5B"              # Issuer Script Results
+            "9F5B",             # Issuer Script Results
+            "9A"                # Transaction Date
           ]
 
           @icc_data = parsed_tlv.to_ber
