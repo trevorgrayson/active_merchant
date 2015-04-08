@@ -1,7 +1,9 @@
+require 'nokogiri'
+
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class CardFlexGateway < Gateway
-      self.test_url = 'https://example.com/test'
+      self.test_url = 'https://wswest.cfinc.com/ach/ACHOnlineServices.svc/'
       self.live_url = 'https://wswest.cfinc.com/ach/ACHOnlineServices.svc/'
 
       self.supported_countries = ['US']
@@ -23,39 +25,17 @@ module ActiveMerchant #:nodoc:
         add_invoice(post, money, options)
         add_payment(post, payment)
         add_address(post, payment, options)
-        add_customer_data(post, options)
 
         commit('AchSale', post)
       end
 
-      #def authorize(money, payment, options={})
-      #  post = {}
-      #  add_invoice(post, money, options)
-      #  add_payment(post, payment)
-      #  add_address(post, payment, options)
-      #  add_customer_data(post, options)
-
-      #  commit('authonly', post)
-      #end
-
-      #def capture(money, authorization, options={})
-      #  commit('capture', post)
-      #end
-
       def refund(money, authorization, options={})
-        commit('AchRefund', post)
+        commit('AchRefund', options)
       end
 
       def void(authorization, options={})
-        commit('AchVoid', post)
+        commit('AchVoid', options)
       end
-
-      #def verify(credit_card, options={})
-      #  MultiResponse.run(:use_first_response) do |r|
-      #    r.process { authorize(100, credit_card, options) }
-      #    r.process(:ignore_result) { void(r.authorization, options) }
-      #  end
-      #end
 
       def supports_scrubbing?
         true
@@ -67,18 +47,32 @@ module ActiveMerchant #:nodoc:
 
       private
 
-      def add_customer_data(post, options)
-      end
-
-      def add_address(post, creditcard, options)
+      def add_address(post, payment, options)
+        address = options[:billing_address] || options[:address] || {}
+        post = post.update({
+          :CustomerAddress => truncate(address[:address1], 30),
+          :CustomerCity =>    truncate(address[:city], 20),
+          :CustomerState =>   truncate(address[:state], 2),
+          :CustomerZipCode => truncate(address[:zip], 5),
+          :CustomerPhone =>   truncate(address[:phone], 10)
+          #:CustomerIdNumber => "",
+          #:CustomerIdState => ""
+        })
       end
 
       def add_invoice(post, money, options)
-        post[:amount] = amount(money)
-        post[:currency] = (options[:currency] || currency(money))
+        post[:TransactionAmount] = amount(money)
+        #post[:currency] = (options[:currency] || currency(money))
       end
 
       def add_payment(post, payment)
+        post = post.update({
+          :CustomerName => "#{payment.first_name} #{payment.last_name}",
+          :CustomerBankAccountType =>   payment.account_type,
+          :CustomerBankAccountNumber => payment.routing_number,
+          :CustomerBankRoutingNumber => payment.account_number,
+          :CustomerBankCheckNumber =>   payment.number
+        })
       end
 
       def parse(body)
@@ -86,8 +80,10 @@ module ActiveMerchant #:nodoc:
       end
 
       def commit(action, parameters)
-        url = (test? ? test_url : live_url)
-        response = parse(ssl_post(url, post_data(action, parameters)))
+        puts parameters
+
+        url = (test? ? test_url : live_url) + action
+        response = parse(ssl_post(url, post_data(parameters)))
 
         Response.new(
           success_from(response),
@@ -107,14 +103,29 @@ module ActiveMerchant #:nodoc:
       def authorization_from(response)
       end
 
-      def post_data(action, parameters = {})
+      def truncate(value, max_size)
+        return nil unless value
+        value.to_s[0, max_size]
+      end
+
+      def post_data(params = {})
+        amount = params.delete(:amount)
+        params = params.update({
+          :MerchantId => @options[:merchant_id],
+          :ServiceKey => @options[:service_key]
+          #:ReferenceId =>
+          #:TransactionAmount => amount
+        })
         Nokogiri::XML::Builder.new do |xml|
           xml.AchWebSaleRequest('xmlns' => 'https://webservices.cfinc.com/ach/data/') do
-            xml.MerchantId(@options[:merchant_id])
-            xml.ServiceKey(@options[:service_key])
+            params.each do |k,v|
+              xml.send(k,v)
+            end
+            #xml.MerchantId(@options[:merchant_id])
+            #xml.ServiceKey(@options[:service_key])
             #xml.ReferenceId
-            #xml.CustomerName
             #xml.TransactionAmount
+            #xml.CustomerName
             #xml.CustomerBankAccountType
             #xml.CustomerBankAccountNumber
             #xml.CustomerBankRoutingNumber

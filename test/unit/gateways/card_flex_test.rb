@@ -3,8 +3,8 @@ require 'test_helper'
 class CardFlexTest < Test::Unit::TestCase
   def setup
     @gateway = CardFlexGateway.new(
-      merchant_id: 'login',
-      service_key: 'password'
+      merchant_id: 'TEST_MERCHANT_ID',
+      service_key: 'TEST_SERVICE_KEY'
     )
 
     @credit_card = credit_card
