@@ -73,7 +73,9 @@ module ActiveMerchant #:nodoc:
       end
 
       def purchase(money, payment, options={})
+        options.symbolize_keys!
         post = {}
+
         add_invoice(post, money, options)
 
         if options.has_key? :transactionid
@@ -83,7 +85,7 @@ module ActiveMerchant #:nodoc:
           add_address(post, payment, options)
         end
 
-        commit("sale", post)
+        commit("sale", post, options[:override])
       end
 
       def authorize(money, payment, options={})
@@ -92,7 +94,7 @@ module ActiveMerchant #:nodoc:
         add_payment(post, payment)
         add_address(post, payment, options)
 
-        commit('auth', post)
+        commit('auth', post, options[:override])
       end
 
       def capture(money, authorization, options={})
@@ -103,7 +105,7 @@ module ActiveMerchant #:nodoc:
         }
         add_invoice(post, money, options)
 
-        commit('capture', post)
+        commit('capture', post, options[:override])
       end
 
       def refund(money, authorization, options={})
@@ -113,7 +115,7 @@ module ActiveMerchant #:nodoc:
           "authcode"      => authcode
         }
         add_invoice(post, money, options)
-        commit('refund', post)
+        commit('refund', post, options[:override])
       end
 
       def void(authorization, options={})
@@ -122,7 +124,7 @@ module ActiveMerchant #:nodoc:
           "transactionid" => transaction_id,
           "authcode"      => authcode
         }
-        commit('void', post)
+        commit('void', post, options[:override])
       end
 
       def verify(credit_card, options={})
@@ -130,7 +132,7 @@ module ActiveMerchant #:nodoc:
           "amount"        => "0.00"
         }
         add_verify_transaction(post, credit_card, options)
-        commit('verify', post)
+        commit('verify', post, options[:override])
       end
 
       def custom_verify(credit_card, type, options={})
@@ -206,6 +208,7 @@ module ActiveMerchant #:nodoc:
         }
       end
 
+<<<<<<< HEAD
       def add_verify_transaction(post, credit_card, options)
         add_payment(post, credit_card)
         add_address(post, credit_card, options)
@@ -213,8 +216,13 @@ module ActiveMerchant #:nodoc:
 
 
       def commit(action, parameters)
+=======
+      def commit(action, parameters, override={})
+>>>>>>> adding cams overrides
         url = live_url
         parameters[:type] = action
+        parameters[:payment] = "creditcard"
+        parameters.merge!(override || {})
 
         response_body = ssl_post(url, post_data(parameters))
         response = parse(response_body)
