@@ -134,6 +134,15 @@ module ActiveMerchant #:nodoc:
         commit('verify', post)
       end
 
+      def validate(credit_card, options={})
+        post = {
+          "amount"        => "0.00"
+        }
+        add_payment(post, credit_card)
+        add_address(post, credit_card, options)
+        commit('validate', post)
+      end
+
       def supports_scrubbing?
         true
       end
