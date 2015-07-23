@@ -129,18 +129,16 @@ module ActiveMerchant #:nodoc:
         post = {
           "amount"        => "0.00"
         }
-        add_payment(post, credit_card)
-        add_address(post, credit_card, options)
+        add_verify_transaction(post, credit_card, options)
         commit('verify', post)
       end
 
-      def validate(credit_card, options={})
+      def custom_verify(credit_card, type, options={})
         post = {
           "amount"        => "0.00"
         }
-        add_payment(post, credit_card)
-        add_address(post, credit_card, options)
-        commit('validate', post)
+        add_verify_transaction(post, credit_card, options)
+        commit(type, post)
       end
 
       def supports_scrubbing?
@@ -207,6 +205,12 @@ module ActiveMerchant #:nodoc:
           h
         }
       end
+
+      def add_verify_transaction(post, credit_card, options)
+        add_payment(post, credit_card)
+        add_address(post, credit_card, options)
+      end
+
 
       def commit(action, parameters)
         url = live_url

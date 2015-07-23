@@ -113,6 +113,13 @@ class CamsTest < Test::Unit::TestCase
     assert_failure verify
   end
 
+  def test_custom_verify
+    @gateway.expects(:ssl_post).returns(custom_verify_response)
+
+    assert verify = @gateway.custom_verify(@credit_card, 'validate', @options)
+    assert_success verify
+  end
+
   def test_scrub
     assert @gateway.supports_scrubbing?
     assert_equal @gateway.scrub(pre_scrubbed), post_scrubbed
@@ -210,5 +217,9 @@ Conn close
 
   def failed_verify_response
     %(response=3&responsetext=Invalid Credit Card Number REFID:3154354764&authcode=&transactionid=&avsresponse=&cvvresponse=&orderid=&type=verify&response_code=300)
+  end
+
+  def custom_verify_response
+    %(response=1&responsetext=&authcode=&transactionid=2656803675&avsresponse=&cvvresponse=&orderid=&type=validate&response_code=100)
   end
 end
