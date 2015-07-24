@@ -208,17 +208,12 @@ module ActiveMerchant #:nodoc:
         }
       end
 
-<<<<<<< HEAD
       def add_verify_transaction(post, credit_card, options)
         add_payment(post, credit_card)
         add_address(post, credit_card, options)
       end
 
-
-      def commit(action, parameters)
-=======
       def commit(action, parameters, override={})
->>>>>>> adding cams overrides
         url = live_url
         parameters[:type] = action
         parameters[:payment] = "creditcard"
