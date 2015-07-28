@@ -11,6 +11,7 @@ class RemoteCamsTest < Test::Unit::TestCase
     
     @credit_card = credit_card('4111111111111111')
     @declined_card = credit_card('4000300015555555')
+    @validate_card = credit_card('4242424242424242')
 
     @options = {
       order_id: @@id,
@@ -140,6 +141,19 @@ class RemoteCamsTest < Test::Unit::TestCase
 
   def test_failed_verify
     response = @gateway.verify(@declined_card, @options)
+    assert_failure response
+    assert_match %r{Invalid Credit Card Number}, response.message
+    assert_equal Gateway::STANDARD_ERROR_CODE[:card_declined], response.error_code
+  end
+
+  def test_successful_validate
+    response = @gateway.validate(@validate_card, @options)
+    assert_failure response
+    assert_match %r{Processor does not support the specified action}, response.message
+  end
+
+  def test_failed_validate
+    response = @gateway.validate(@declined_card, @options)
     assert_failure response
     assert_match %r{Invalid Credit Card Number}, response.message
     assert_equal Gateway::STANDARD_ERROR_CODE[:card_declined], response.error_code

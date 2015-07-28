@@ -113,11 +113,18 @@ class CamsTest < Test::Unit::TestCase
     assert_failure verify
   end
 
-  def test_custom_verify
-    @gateway.expects(:ssl_post).returns(custom_verify_response)
+  def test_successful_validate
+    @gateway.expects(:ssl_post).returns(successful_validate_response)
 
-    assert verify = @gateway.custom_verify(@credit_card, 'validate', @options)
-    assert_success verify
+    assert validate = @gateway.validate(@credit_card, @options)
+    assert_success validate
+  end
+
+  def test_failed_validate
+    @gateway.expects(:ssl_post).returns(failed_validate_response)
+
+    assert validate = @gateway.validate(@bad_credit_card, @options)
+    assert_failure validate
   end
 
   def test_scrub
@@ -219,7 +226,13 @@ Conn close
     %(response=3&responsetext=Invalid Credit Card Number REFID:3154354764&authcode=&transactionid=&avsresponse=&cvvresponse=&orderid=&type=verify&response_code=300)
   end
 
-  def custom_verify_response
-    %(response=1&responsetext=&authcode=&transactionid=2656803675&avsresponse=&cvvresponse=&orderid=&type=validate&response_code=100)
+  def successful_validate_response
+    %(response=1&responsetext=Approved&authcode=&transactionid=2656803675&avsresponse=N&cvvresponse=M&orderid=&type=validate&response_code=100)
   end
+
+  def failed_validate_response
+    %(response=3&responsetext=Processor does not support the specified action REFID:3161173307&authcode=&transactionid=&avsresponse=&cvvresponse=&orderid=&type=validate&response_code=300)
+  end
+
+
 end
